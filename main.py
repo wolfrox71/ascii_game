@@ -1,6 +1,12 @@
 import pygame
-from random import randint, choice
-
+from random import randint
+from time import perf_counter
+from info import scale, max_score
+from materials.coin import coin
+from materials.grass import grass
+from materials.dirt import dirt
+from materials.cloud import cloud
+from materials.air import air
 """
         NOTES FOR FUTRE ME
         CANNOT JUMP WHILE CROUCHED -> REASON TO BE UNCROUCHED
@@ -11,11 +17,6 @@ from random import randint, choice
 
 pygame.init()
 
-scale = 64
-
-white = (255, 255, 255)
-
-
 level = [
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -25,6 +26,8 @@ level = [
     [0,0,0,0,0,0,0,0,0,0,0,2,2,0,2,3,3,3,3,3,3],
     [2,2,2,2,2,2,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3]
 ]
+
+start = perf_counter()
 
 board_size = (len(level[0]),len(level))
 print(board_size)
@@ -52,6 +55,11 @@ class player:
         self.jumping = False
         self.lower = pygame.image.load(f"./sprites/character/lower_{scale}.png")
         self.upper = pygame.image.load(f"./sprites/character/upper_{scale}.png")
+        self.left_key = pygame.K_LEFT
+        self.right_key = pygame.K_RIGHT
+        self.up_key = pygame.K_UP
+        self.down_key = pygame.K_DOWN
+        self.crouch_key = pygame.K_LCTRL
 
     def gravity(self):
         valid = player.valid_position(self.x,self.y,True, -1, self)
@@ -88,7 +96,7 @@ class player:
                 factor = 1
 
             display_surface.blit(yellow, ((((board_size[0] - character.x))*scale),((board_size[1] -y+factor)*scale)))
-            if x > 0 and x <= board_size[0] and y > 0 and y + factor <= board_size[1]+2:
+            if x > 0 and x-1 <= board_size[0] and y > 0 and y + factor <= board_size[1]+2:
                 for material in materials:
                     if material.value == level[board_size[1] -y+factor][(board_size[0] - character.x)]:
                         if (material.solid):
@@ -129,50 +137,6 @@ class player:
                 return True
             return False
 
-
-class coin:
-    value = 4
-    colour = "yellow"
-    solid = False
-    image = pygame.image.load(f"./sprites/coin_{scale}.png")
-    collectable = True
-
-    def on_collection(character):
-        score_increase = 1
-        character.score += score_increase
-    
-class grass:
-    value = 2
-    colour = "green"
-    solid = True
-    image = pygame.image.load(f"./sprites/grass_{scale}.png")
-    score_increase = 0
-    collectable = False
-
-class dirt:
-    value = 3
-    colour = "green"
-    solid = True
-    image = pygame.image.load(f"./sprites/dirt_{scale}.png")
-    score_increase = 0
-    collectable = False
-
-class air:
-    value = 0
-    colour = "blue"
-    solid = False
-    image = pygame.image.load(f"./sprites/air_{scale}.png")
-    score_increase = 0
-    collectable = False
-
-class cloud:
-    value = 1
-    colour = "white"
-    solid = False
-    image = pygame.image.load(f"./sprites/cloud_{scale}.png")
-    score_increase = 0
-    collectable = False
-
 materials = [cloud, air, dirt, grass, coin]
 solid_materials = [dirt, grass]
 non_solid_materials = [air, cloud, coin]
@@ -183,8 +147,12 @@ collectable = [coin]
 character = player()
 
 font = pygame.font.SysFont(None, 48)
-
 while True:
+    
+    if character.score >= max_score:
+        print(perf_counter()-start)
+        break
+        
     pygame.time.Clock().tick(30)
 	# completely fill the surface object
 	# with white colour
@@ -206,6 +174,8 @@ while True:
     
     score_text = font.render(f"SCORE:{character.score}", True, (255,0,0))
     display_surface.blit(score_text, (Y/2.5, X//10))
+    timer = font.render(f"Time:{round(perf_counter()-start,2)}", True, (255,0,0))
+    display_surface.blit(timer, (Y//10, X//10))
 
 
     display_surface.blit(character.lower, ((board_size[0] - character.x)*scale, (board_size[1]-character.y)*scale))
@@ -254,16 +224,16 @@ while True:
 
         if event.type == pygame.KEYDOWN:
             # -----------------movement---------------------
-            if event.key == pygame.K_LEFT and player.valid_position(character.x,character.y, False, +1, character):
+            if event.key == character.left_key and player.valid_position(character.x,character.y, False, +1, character):
                 character.x += 1
-            if event.key == pygame.K_RIGHT and player.valid_position(character.x,character.y, False, -1, character):
+            if event.key == character.right_key and player.valid_position(character.x,character.y, False, -1, character):
                 character.x -= 1
-            if event.key == pygame.K_DOWN and player.valid_position(character.x,character.y, True, -1, character):
+            if event.key == character.down_key and player.valid_position(character.x,character.y, True, -1, character):
                 character.y -= 1
-            if event.key == pygame.K_UP and player.valid_position(character.x+1,character.y, True, character.height, character):
+            if event.key == character.up_key and player.valid_position(character.x+1,character.y, True, character.height, character):
                 character.y += 1
 
-            if event.key == pygame.K_LCTRL:
+            if event.key == character.crouch_key:
                 
                 if player.valid_position(character.x, character.y, True, 2, character) and character.crouch:
                     character.crouch = False
